@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import ssl
 
 import tensorflow as tf
@@ -7,14 +8,21 @@ from tensorflow import keras
 
 import numpy as np
 
+logging.basicConfig(level=logging.DEBUG)
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 boston_housing = keras.datasets.boston_housing
 
 (train_data, train_labels), (test_data, test_labels) = boston_housing.load_data()
 
+print("train_labels.shape: {}".format(train_data.shape))
+
 # Shuffle the training set 拆分样本
 order = np.argsort(np.random.random(train_labels.shape))
+
+logging.debug("order: %s", order)
+
 train_data = train_data[order]
 train_labels = train_labels[order]
 
@@ -109,3 +117,13 @@ plot_history(history)
 [loss, mae] = model.evaluate(test_data, test_labels, verbose=0)
 
 print("Testing set Mean Abs Error: ${:7.2f}".format(mae * 1000))
+
+# 总结
+#
+# 此笔记本介绍了几个处理回归问题的技巧。
+#
+# 均方误差 (MSE) 是用于回归问题的常见损失函数（与分类问题不同）。
+# 同样，用于回归问题的评估指标也与分类问题不同。常见回归指标是平均绝对误差 (MAE)。
+# 如果输入数据特征的值具有不同的范围，则应分别缩放每个特征。
+# 如果训练数据不多，则选择隐藏层较少的小型网络，以避免出现过拟合。
+# 早停法是防止出现过拟合的实用技术。
