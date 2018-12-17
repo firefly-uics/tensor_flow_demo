@@ -10,9 +10,9 @@ import tensorflow as tf
 
 logging.basicConfig(level=logging.DEBUG)
 
-column_names = ['open', 'high', 'low', 'close', 'volume', 'p_change', 'ma5', 'ma10']
+column_names = ['open', 'high', 'close', 'volume']
 code = '002396'
-module_name = code + '_high_model.h5'
+module_name = code + '_low_model.h5'
 
 def x_train_col_index(all_columns, names):
     r = []
@@ -34,7 +34,7 @@ def load_data():
     stock_data = np.array(df)
 
     x_train_col = x_train_col_index(columns, column_names)
-    y_train_col = x_train_col_index(columns, ['high'])[0]
+    y_train_col = x_train_col_index(columns, ['low'])[0]
 
     x = np.array(stock_data[:, x_train_col])
     y = np.array(stock_data[:, y_train_col])
@@ -120,10 +120,10 @@ def fit():
 
     #
     # The patience parameter is the amount of epochs to check for improvement
-    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=20)
+    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=100)
 
     history = model.fit(train_data, train_labels, epochs=EPOCHS,
-                        validation_split=0.2, verbose=0,
+                        validation_split=0.02, verbose=0,
                         callbacks=[early_stop, PrintDot()])
 
     def plot_history(history):
@@ -144,13 +144,35 @@ def fit():
 
     [loss, mae] = model.evaluate(test_data, test_labels, verbose=0)
 
-    logging.info("Testing set Mean Abs Error: ${:7.2f}".format(mae * 1000))
+    logging.info("Testing set Mean Abs Error: ${:7.2f} {}".format(mae, loss))
 
     x_test_data = np.array(test_data[0:1])
     y_test_labels = np.array(test_labels[0:1])
 
     results = model.evaluate(x_test_data, y_test_labels, verbose=0)
     logging.info("data:%s, label:%s,res:%s", x_test_data, y_test_labels, results)
+
+    x_test_predictions = model.predict(x_test_data).flatten()
+    logging.info("x_test_predictions data:%s, label:%s,res:%s", x_test_data, y_test_labels, x_test_predictions)
+
+    test_predictions = model.predict(test_data).flatten()
+
+    plt.scatter(test_labels, test_predictions)
+    plt.xlabel('True Values [1000$]')
+    plt.ylabel('Predictions [1000$]')
+    plt.axis('equal')
+    plt.xlim(plt.xlim())
+    plt.ylim(plt.ylim())
+    _ = plt.plot([-100, 100], [-100, 100])
+
+    plt.show()
+
+    error = test_predictions - test_labels
+    plt.hist(error, bins=50)
+    plt.xlabel("Prediction Error [1000$]")
+    _ = plt.ylabel("Count")
+
+    plt.show()
 
     model.save(module_name)
 

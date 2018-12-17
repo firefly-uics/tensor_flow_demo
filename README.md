@@ -5,6 +5,7 @@
 # install tensorflow
 pip install tensorflow==1.12.0 -i https://mirrors.aliyun.com/pypi/simple/
 pip install matplotlib -i https://mirrors.aliyun.com/pypi/simple/
+pip install tushare -i https://mirrors.aliyun.com/pypi/simple/
 pip install bs4 -i https://mirrors.aliyun.com/pypi/simple/
 
 

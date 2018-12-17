@@ -9,12 +9,18 @@ import matplotlib.pyplot as plt
 from tensorflow import keras
 import tensorflow as tf
 
-from ts.st_history_data import x_train_col_index, column_names, load_data
+from ts.st_history_data import x_train_col_index, column_names, load_data, code
 
-logging.basicConfig(level=logging.DEBUG)
-code = '002230'
+logging.basicConfig(level=logging.INFO)
 
-df = ts.get_hist_data(code, start='2018-12-01', end='2018-12-10', ktype='60')
+#显示所有列
+pd.set_option('display.max_columns', None)
+#显示所有行
+pd.set_option('display.max_rows', None)
+#设置value的显示长度为100，默认为50
+pd.set_option('max_colwidth',100)
+
+df = ts.get_hist_data(code, start='2018-11-01', end='2018-11-30', ktype='60')
 
 df = df.sort_values(axis=0, ascending=True, by='date')
 
@@ -37,7 +43,7 @@ T1 = 0
 
 logging.info("data count:%s", data_count)
 
-new_model = keras.models.load_model('my_model1.h5')
+new_model = keras.models.load_model(code + '_p_change_model.h5')
 logging.info(new_model.summary())
 
 
@@ -69,6 +75,7 @@ def get_target_price(index):
     yesterday = today - datetime.timedelta(days=1)
 
     yesterday_df = ts.get_hist_data(code, start=yesterday.strftime('%Y-%m-%d'), end=yesterday.strftime('%Y-%m-%d'))
+    today_df = ts.get_hist_data(code, start=today.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))
 
     logging.debug("yesterday_df:%s", yesterday_df)
     if len(yesterday_df) == 0:
@@ -96,14 +103,14 @@ def get_target_price(index):
 
     logging.debug("x:%s", x)
 
-    loss, acc = new_model.evaluate(x, [0])
+    test_predictions = new_model.predict(x).flatten()[0]
+    today_p_change = today_df['p_change']
+    logging.info("test_predictions:%f, today_df:%s, loss:%f", test_predictions, today_p_change, test_predictions-test_predictions)
 
-    logging.info("evaluate: %f", acc)
+    target_price['min_change'] = test_predictions * 0.01
+    target_price['max_change'] = test_predictions * 0.09
 
-    target_price['min_change'] = acc * 0.01
-    target_price['max_change'] = acc * 0.09
-
-    return acc
+    return test_predictions
 
 
 old_index = ''
@@ -121,12 +128,14 @@ for index, row in df.iterrows():
         train_val = get_target_price(index)
         logging.debug("old_index:%s, target_price:%s, train_val:%s", old_index, target_price, train_val)
 
-    if float(train_val) < 2:
+    if float(train_val) < 2 or float(train_val) > 8:
         if day == data_count:
             logging.info("清空")
             account_total = account_total + T1 * price - sell_fee(T1, price)
             T1 = 0
             print_account()
+        continue
+    if -1 > float(train_val) - p_change > 1:
         continue
 
     if p_change < target_price['min_change']:
