@@ -9,13 +9,15 @@ import matplotlib.pyplot as plt
 from tensorflow import keras
 import tensorflow as tf
 
-from ts.st_history_data import x_train_col_index, load_data, code
-from ts.st_history_high_data import column_names as column_names_h
-from ts.st_history_high_data import module_name as high_module_name
-from ts.st_history_low_data import module_name as low_module_name
-from ts.st_history_low_data import column_names as column_names_l
+from ts.build_model import BuildModel
 
 logging.basicConfig(level=logging.INFO)
+
+column_names = ['open', 'high', 'low', 'close', 'change', 'vol']
+code = '002396.SZ'
+model_name = '_model.h5'
+high_module_name = code +'_high'+ model_name
+low_module_name = code +'_low'+ model_name
 
 # 显示所有列
 pd.set_option('display.max_columns', None)
@@ -48,8 +50,6 @@ def buy_fee(change_unit, price):
 
 
 def get_target_price(index):
-    # (train_data, train_labels), (test_data, test_labels) = load_data()
-
     today = datetime.datetime.strptime(index, '%Y-%m-%d %H:%M:%S')
     yesterday = today - datetime.timedelta(days=1)
 
@@ -63,10 +63,10 @@ def get_target_price(index):
     stock_data = np.array(yesterday_df)
     columns = yesterday_df.columns.values.tolist()
 
-    x_train_col_h = x_train_col_index(columns, column_names_h)
-    x_train_col_l = x_train_col_index(columns, column_names_l)
+    x_train_col = BuildModel.x_train_col_index(columns, column_names)
+    x_train_col_l = x_train_col_index(columns, column_names)
 
-    x_h = np.array(stock_data[:, x_train_col_h])
+    x_h = np.array(stock_data[:, x_train_col])
     x_l = np.array(stock_data[:, x_train_col_l])
 
     optimizer = tf.train.RMSPropOptimizer(0.001)
