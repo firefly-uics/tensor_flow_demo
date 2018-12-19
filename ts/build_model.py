@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
 
+logging.basicConfig(level=logging.DEBUG)
 
 class BuildModel:
     _model_name = '_model.h5'
@@ -79,11 +80,11 @@ class BuildModel:
                 if epoch % 100 == 0: print('')
                 print('.', end='')
 
-        EPOCHS = 500
+        EPOCHS = 1000
 
         #
         # The patience parameter is the amount of epochs to check for improvement
-        early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=100)
+        early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
 
         history = model.fit(train_data, train_labels, epochs=EPOCHS,
                             validation_split=0.02, verbose=0,

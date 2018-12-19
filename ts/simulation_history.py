@@ -46,11 +46,11 @@ class SimulationHistory:
                 account.T1 = account.T1 + account.T0
                 account.T0 = 0
 
-            if self.is_buy(index, row):
-                self.buy(price)
-
             if self.is_sell(index, row):
                 self.sell(price)
+
+            if self.is_buy(index, row):
+                self.buy(price)
 
             if self.is_clean(index, row):
                 self.clean(price)

@@ -14,67 +14,62 @@ from ts.db_utils import get_daily_by_trade_date
 from ts.simulation_history import SimulationHistory
 from ts.st_history_data import x_train_col_index
 
-class HighLow(SimulationHistory):
+class Change(SimulationHistory):
     model_cache = {}
-    t1_predictions = {}
-    t0_predictions = {}
+    t1_predictions = None
+    t0_predictions = 0
     t0_index = ''
 
     def is_sell(self, index, row):
-        if self.t0_index != index:
-            self.t1_predictions = self.t0_predictions
-            self.t0_index = index
-
         logging.debug('index: %s, date: %s', index, row['date'])
         today = datetime.datetime.strptime(row['date'], '%Y-%m-%d %H:%M:%S')
 
         df = get_daily_by_trade_date(self.get_code(), today.strftime('%Y%m%d'))
 
-        h_predictions, true_predictions = self.predictions(df, ['open', 'low', 'close', 'change', 'vol'], 'high',
-                                                         self.get_code() + '_high_model.h5')
+        change_predictions, true_predictions = self.predictions(df, ['open', 'high', 'low', 'close'], 'pct_chg',
+                                                         self.get_code() + '_pct_chg_model.h5')
 
-        logging.debug('h_predictions:%s, true_predictions:%s', h_predictions, true_predictions)
+        logging.debug('change_predictions:%s, true_predictions:%s', change_predictions, true_predictions)
 
         if len(df) == 0:
             return False
 
-        if h_predictions < row['ma5']:
+        if self.t0_predictions == None:
             return False
 
-        if abs(row['ma5'] - h_predictions) > 3:
+        if self.t0_predictions <= 0:
             return False
 
-        logging.debug('h_predictions :%s, ma5: %s, price:%s', h_predictions, row['ma5'], row['close'])
+        logging.debug('row[ma5] * (1+self.t0_predictions/100) :%s, ma5: %s, price:%s', row['ma5'] * (1+self.t0_predictions/100), row['ma5'], row['close'])
 
-        return row['close'] > h_predictions
+        return row['close'] > row['ma5'] * (1+self.t0_predictions/100)
 
     def is_buy(self, index, row):
-        if self.t0_index != index:
-            self.t1_predictions = self.t0_predictions
-            self.t0_index = index
-
         logging.debug('index: %s, date: %s', index, row['date'])
         today = datetime.datetime.strptime(row['date'], '%Y-%m-%d %H:%M:%S')
 
         df = get_daily_by_trade_date(self.get_code(), today.strftime('%Y%m%d'))
 
-        l_predictions, true_predictions = self.predictions(df, ['open', 'high', 'close', 'change', 'vol'], 'low', self.get_code() + '_low_model.h5')
+        change_predictions, true_predictions = self.predictions(df, ['open', 'high', 'low', 'close'], 'pct_chg',
+                                                         self.get_code() + '_pct_chg_model.h5')
 
-        logging.debug('l_predictions:%s, true_predictions:%s', l_predictions, true_predictions)
+        self.t0_predictions = change_predictions
+
+        logging.debug('change_predictions:%s, true_predictions:%s', change_predictions, true_predictions)
+
+        if self.t0_index != index:
+            self.t1_predictions = self.t0_predictions
+            self.t0_index = index
 
         if len(df) == 0:
             return False
 
-
-        if l_predictions > row['ma5']:
+        if self.t0_predictions <= 0:
             return False
 
-        if abs(row['ma5'] - l_predictions) > 3:
-            return False
+        logging.debug('row[ma5] * (1-change_predictions/100) :%s, ma5: %s, price:%s', row['ma5'] * (1-self.t0_predictions/100), row['ma5'], row['close'])
 
-        logging.debug('l_predictions :%s, ma5: %s, price:%s', l_predictions, row['ma5'], row['close'])
-
-        return row['close'] < l_predictions
+        return row['close'] < row['ma5'] * (1-self.t0_predictions/100)
 
     def predictions(self, df, column_names, label_name, module_name):
         columns = df.columns.values.tolist()
@@ -102,6 +97,6 @@ class HighLow(SimulationHistory):
 
             self.model_cache[module_name] = model
 
-        predictions = model.predict(x).flatten()[0]/10000
+        predictions = model.predict(x).flatten()[0]/10 + 1.5
 
         return predictions, y[0]
