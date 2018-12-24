@@ -80,11 +80,11 @@ class BuildModel:
                 if epoch % 100 == 0: print('')
                 print('.', end='')
 
-        EPOCHS = 1000
+        EPOCHS = 500
 
         #
         # The patience parameter is the amount of epochs to check for improvement
-        early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
+        early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=150)
 
         history = model.fit(train_data, train_labels, epochs=EPOCHS,
                             validation_split=0.02, verbose=0,
@@ -130,8 +130,11 @@ class BuildModel:
 
         plt.show()
 
+
+
         error = test_predictions - test_labels
-        plt.hist(error, bins=50)
+        logging.debug("error:%s", error)
+        plt.hist(error, bins=25)
         plt.xlabel("Prediction Error [1000$]")
         _ = plt.ylabel("Count")
 

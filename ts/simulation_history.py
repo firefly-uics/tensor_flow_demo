@@ -13,6 +13,8 @@ class account:
     change_unit = 100
     last_price = 0
     change_fee = 0
+    cost = 0
+    cycle = 0
 
     def __str__(self) -> str:
         return 'total:%s, t0:%s, t1:%s, clean total:%s, last_price:%s, change_fee:%s' % (self.total, self.T0, self.T1, self.last_price * (self.T0 + self.T1)+self.total, self.last_price, self.change_fee)
@@ -28,6 +30,9 @@ class SimulationHistory:
     def get_code(self):
         return self._code
 
+    def get_account(self):
+        return account
+
     def execute(self):
         df = get_hist_data(self._code, self._start, self._end)
 
@@ -36,8 +41,10 @@ class SimulationHistory:
         old_index = ''
 
         for index, row in df.iterrows():
+            logging.debug('row: %s', row)
             price = row['close']
             account.last_price = price
+            account.cycle = account.cycle + 1
 
             is_change = old_index != index
 
@@ -60,6 +67,7 @@ class SimulationHistory:
             logging.debug("buy success")
             account.total = account.total - account.change_unit * price - self.buy_fee(account.change_unit, price)
             account.T0 = account.T0 + account.change_unit
+
             self.print_change()
 
     def sell(self, price):
@@ -95,4 +103,5 @@ class SimulationHistory:
         logging.info("清空股票账户")
         account.total = account.total + account.T1 * price - self.sell_fee(account.T1, price)
         account.T1 = 0
+        account.cycle = 0
         self.print_change()
